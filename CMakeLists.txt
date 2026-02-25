@@ -1,0 +1,35 @@
+cmake_minimum_required(VERSION 3.16)
+project(winrun C)
+
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
+add_executable(winrun
+    src/main.c
+    src/pe_parser.c
+    src/memory_mapper.c
+    src/relocations.c
+    src/import_resolver.c
+    src/runtime.c
+    src/signals.c
+)
+
+target_include_directories(winrun PRIVATE include)
+target_link_libraries(winrun PRIVATE dl)
+
+if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(winrun PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+file(GLOB WG_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/.wg/*.c")
+if (WG_SOURCES)
+    add_library(winapi SHARED ${WG_SOURCES})
+    set_target_properties(winapi PROPERTIES
+        OUTPUT_NAME winapi
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    )
+    if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(winapi PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+    message(STATUS "Detected .wg WinAPI sources; will build libwinapi.so")
+endif()
