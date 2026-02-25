@@ -20,3 +20,16 @@ target_link_libraries(winrun PRIVATE dl)
 if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(winrun PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+file(GLOB WG_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/.wg/*.c")
+if (WG_SOURCES)
+    add_library(winapi SHARED ${WG_SOURCES})
+    set_target_properties(winapi PROPERTIES
+        OUTPUT_NAME winapi
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    )
+    if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(winapi PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+    message(STATUS "Detected .wg WinAPI sources; will build libwinapi.so")
+endif()

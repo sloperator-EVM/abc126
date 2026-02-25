@@ -5,10 +5,36 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 static bool env_debug_enabled(void) {
     const char *debug = getenv("WINRUN_DEBUG");
     return debug != NULL && strcmp(debug, "0") != 0;
+}
+
+static bool file_exists(const char *path) {
+    return access(path, R_OK) == 0;
+}
+
+static const char *resolve_winapi_lib_path(void) {
+    const char *env_path = getenv("WINRUN_WINAPI_LIB");
+    if (env_path && env_path[0] != '\0') {
+        return env_path;
+    }
+
+    static const char *candidates[] = {
+        "./lib/libwinapi.so",
+        "./.wg/libwinapi.so",
+        "./build/lib/libwinapi.so",
+    };
+
+    for (size_t i = 0; i < sizeof(candidates) / sizeof(candidates[0]); ++i) {
+        if (file_exists(candidates[i])) {
+            return candidates[i];
+        }
+    }
+
+    return "./lib/libwinapi.so";
 }
 
 int main(int argc, char **argv) {
@@ -43,9 +69,12 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    void *winapi = dlopen("./lib/libwinapi.so", RTLD_NOW | RTLD_LOCAL);
+    const char *winapi_lib_path = resolve_winapi_lib_path();
+    void *winapi = dlopen(winapi_lib_path, RTLD_NOW | RTLD_LOCAL);
     if (!winapi) {
-        fprintf(stderr, "warning: could not load ./lib/libwinapi.so: %s\n", dlerror());
+        fprintf(stderr, "warning: could not load WinAPI library '%s': %s\n", winapi_lib_path, dlerror());
+    } else if (debug) {
+        fprintf(stderr, "winrun: loaded WinAPI shim from %s\n", winapi_lib_path);
     }
 
     import_resolver resolver = {

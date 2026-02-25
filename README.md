@@ -9,16 +9,26 @@
 - Relocation processor for common base relocation types:
   - `IMAGE_REL_BASED_DIR64` (PE32+)
   - `IMAGE_REL_BASED_HIGHLOW` (PE32)
-- Import resolver that walks import descriptors and patches IAT entries using symbols from `./lib/libwinapi.so`.
+- Import resolver that walks import descriptors and patches IAT entries using symbols from a WinAPI shim library.
 - TLS callback initialization (`DLL_PROCESS_ATTACH`).
 - Signal handling for crash diagnostics (`SIGSEGV`, `SIGILL`, `SIGBUS`, `SIGABRT`) with optional backtraces (`WINRUN_DEBUG=1`).
 
-## Build
+## Quick bootstrap (recommended)
+
+```bash
+./scripts/install.sh
+```
+
+This builds `build/winrun` and, when `.wg/*.c` files exist, compiles them into `lib/libwinapi.so`.
+
+## Build manually
 
 ```bash
 cmake -S . -B build
 cmake --build build
 ```
+
+If `.wg/*.c` exists, CMake also builds `build/lib/libwinapi.so`.
 
 ## Run
 
@@ -26,7 +36,29 @@ cmake --build build
 WINRUN_DEBUG=1 ./build/winrun path/to/program.exe [args...]
 ```
 
-By default `winrun` tries to load `./lib/libwinapi.so` and resolve imported WinAPI function names with `dlsym`.
+WinAPI shim lookup order:
+
+1. `WINRUN_WINAPI_LIB` (if set)
+2. `./lib/libwinapi.so`
+3. `./.wg/libwinapi.so`
+4. `./build/lib/libwinapi.so`
+
+## NixOS support
+
+A `shell.nix` is provided. Use:
+
+```bash
+nix-shell
+./scripts/install.sh
+```
+
+See full guide: [`docs/USAGE.md`](docs/USAGE.md)
+
+## `.wg` integration
+
+Place your WinAPI compatibility function sources in `.wg/*.c` and re-run installer.
+
+See `.wg/README.md` for details.
 
 ## Notes / limitations
 
