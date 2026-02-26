@@ -57,9 +57,11 @@ if compgen -G "${WG_DIR}/*.c" >/dev/null; then
     "${WG_TMP_DIR}/viewporter.c" \
     "${WG_TMP_DIR}/wlr-layer-shell-unstable-v1.c" \
     "${WG_TMP_DIR}/wlr-virtual-pointer-unstable-v1.c" \
+    "${WG_TMP_DIR}/xdg-shell.c" \
     ${WG_LIBS} -pthread \
     -o "${LIB_DIR}/libwinapi.so"
   log "built ${LIB_DIR}/libwinapi.so"
+
 elif [[ -f "${BUILD_DIR}/lib/libwinapi.so" ]]; then
   log "copying CMake-built libwinapi.so from build/lib"
   cp -f "${BUILD_DIR}/lib/libwinapi.so" "${LIB_DIR}/libwinapi.so"
@@ -67,6 +69,13 @@ elif [[ -f "${BUILD_DIR}/lib/libwinapi.so" ]]; then
 else
   log "no .wg/*.c found, skipping WinAPI shim build"
   log "add your WinAPI implementation files under .wg/"
+fi
+
+
+if [[ -f "${LIB_DIR}/libwinapi.so" ]]; then
+  log "checking libwinapi.so for unresolved symbols"
+  ldd -r "${LIB_DIR}/libwinapi.so" >/dev/null
+  log "libwinapi.so symbol check passed"
 fi
 
 log "done"

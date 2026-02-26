@@ -28,6 +28,7 @@ if (WG_SOURCES)
         "${CMAKE_SOURCE_DIR}/.wg/tmp/viewporter.c"
         "${CMAKE_SOURCE_DIR}/.wg/tmp/wlr-layer-shell-unstable-v1.c"
         "${CMAKE_SOURCE_DIR}/.wg/tmp/wlr-virtual-pointer-unstable-v1.c"
+        "${CMAKE_SOURCE_DIR}/.wg/tmp/xdg-shell.c"
     )
 
     find_package(PkgConfig REQUIRED)
