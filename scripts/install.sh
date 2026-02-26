@@ -88,6 +88,14 @@ if [[ -f "${ROOT_DIR}/.wg/test_win.exe" ]]; then
     log "loader smoke test crashed"
     exit 1
   fi
+  if printf '%s' "${smoke_out}" | grep -q "unresolved import:"; then
+    log "loader smoke test has unresolved imports"
+    exit 1
+  fi
+  if [[ ${smoke_rc} -ne 0 ]]; then
+    log "loader smoke test failed (rc=${smoke_rc})"
+    exit 1
+  fi
   log "loader smoke test completed (rc=${smoke_rc})"
 fi
 
