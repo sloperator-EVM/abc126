@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${ROOT_DIR}/build"
 LIB_DIR="${ROOT_DIR}/lib"
 WG_DIR="${ROOT_DIR}/.wg"
+WG_TMP_DIR="${WG_DIR}/tmp"
 CC_BIN="${CC:-cc}"
 
 log() {
@@ -37,9 +38,30 @@ cmake --build "${BUILD_DIR}" -j"$(jobs)"
 mkdir -p "${LIB_DIR}"
 
 if compgen -G "${WG_DIR}/*.c" >/dev/null; then
+  require_tool pkg-config
+
+  if ! pkg-config --exists wayland-client; then
+    log "wayland-client development files are required to build libwinapi.so"
+    log "install package: wayland (dev) and rerun (for nix-shell include wayland in buildInputs)"
+    exit 1
+  fi
+
   log "building lib/libwinapi.so from .wg sources"
-  "${CC_BIN}" -shared -fPIC "${WG_DIR}"/*.c -o "${LIB_DIR}/libwinapi.so"
+  WG_CFLAGS="$(pkg-config --cflags wayland-client)"
+  WG_LIBS="$(pkg-config --libs wayland-client)"
+  "${CC_BIN}" -shared -fPIC \
+    -I"${WG_DIR}" -I"${WG_TMP_DIR}" \
+    ${WG_CFLAGS} \
+    "${WG_DIR}"/*.c \
+    "${WG_TMP_DIR}/single-pixel-buffer-v1.c" \
+    "${WG_TMP_DIR}/viewporter.c" \
+    "${WG_TMP_DIR}/wlr-layer-shell-unstable-v1.c" \
+    "${WG_TMP_DIR}/wlr-virtual-pointer-unstable-v1.c" \
+    "${WG_TMP_DIR}/xdg-shell.c" \
+    ${WG_LIBS} -pthread \
+    -o "${LIB_DIR}/libwinapi.so"
   log "built ${LIB_DIR}/libwinapi.so"
+
 elif [[ -f "${BUILD_DIR}/lib/libwinapi.so" ]]; then
   log "copying CMake-built libwinapi.so from build/lib"
   cp -f "${BUILD_DIR}/lib/libwinapi.so" "${LIB_DIR}/libwinapi.so"
@@ -47,6 +69,13 @@ elif [[ -f "${BUILD_DIR}/lib/libwinapi.so" ]]; then
 else
   log "no .wg/*.c found, skipping WinAPI shim build"
   log "add your WinAPI implementation files under .wg/"
+fi
+
+
+if [[ -f "${LIB_DIR}/libwinapi.so" ]]; then
+  log "checking libwinapi.so for unresolved symbols"
+  ldd -r "${LIB_DIR}/libwinapi.so" >/dev/null
+  log "libwinapi.so symbol check passed"
 fi
 
 log "done"

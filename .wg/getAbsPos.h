@@ -13,13 +13,12 @@
 #include <unistd.h>
 #include "relative_move.h"
 
-#include <wayland-client-protocol.h>
 #include <wayland-client.h>
 
-#include "single-pixel-buffer-v1.h"
-#include "wlr-layer-shell-unstable-v1.h"
-#include "wlr-virtual-pointer-unstable-v1.h"
-#include "viewporter.h"
+#include "tmp/single-pixel-buffer-v1.h"
+#include "tmp/wlr-layer-shell-unstable-v1.h"
+#include "tmp/wlr-virtual-pointer-unstable-v1.h"
+#include "tmp/viewporter.h"
 
 
 // for arguments

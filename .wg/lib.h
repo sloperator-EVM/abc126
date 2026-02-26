@@ -88,3 +88,6 @@ extern UINT SendInput(UINT cInputs, INPUT inputs[], int cbSize){
     }
     return 0;
 }
+extern void DeleteCriticalSection(void *critical_section){
+    (void)critical_section;
+}
