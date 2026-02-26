@@ -22,6 +22,7 @@ typedef struct {
 void *mapped_rva_to_ptr(const mapped_image *mapped, uint32_t rva, size_t size);
 
 int map_pe_image(const pe_image *image, mapped_image *mapped);
+int protect_pe_image_sections(const pe_image *image, const mapped_image *mapped);
 void unmap_pe_image(mapped_image *mapped);
 int apply_relocations(const pe_image *image, mapped_image *mapped);
 int resolve_imports(const pe_image *image, mapped_image *mapped, import_resolver *resolver);

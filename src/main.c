@@ -103,6 +103,17 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    rc = protect_pe_image_sections(&image, &mapped);
+    if (rc != 0) {
+        fprintf(stderr, "failed to apply section protections (rc=%d)\n", rc);
+        unmap_pe_image(&mapped);
+        pe_destroy_image(&image);
+        if (winapi) {
+            dlclose(winapi);
+        }
+        return 1;
+    }
+
     int app_rc = execute_entry_point(&image, &mapped, argc - 1, &argv[1]);
 
     unmap_pe_image(&mapped);
