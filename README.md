@@ -1,81 +1,57 @@
 # winrun
 
-`winrun` is a Linux-hosted prototype PE loader intended to execute Windows binaries by mapping their image and binding imports to a Linux WinAPI compatibility layer (`libwinapi.so`).
+`winrun` is a Linux PE loader prototype for running selected Windows binaries by:
 
-## Current capabilities
+1. parsing a PE image,
+2. mapping sections into memory,
+3. applying base relocations,
+4. resolving imports from a local WinAPI shim (`libwinapi.so`),
+5. calling TLS callbacks,
+6. transferring control to the PE entry point.
 
-- PE parser for DOS + NT headers, section table, data directories, and RVA translation.
-- Memory mapper that tries preferred image base first, falls back to arbitrary base, copies headers/sections, zero-initializes BSS, and applies per-section memory protections.
-- Relocation processor for common base relocation types:
-  - `IMAGE_REL_BASED_DIR64` (PE32+)
-  - `IMAGE_REL_BASED_HIGHLOW` (PE32)
-- Import resolver that walks import descriptors and patches IAT entries using symbols from a WinAPI shim library.
-- TLS callback initialization (`DLL_PROCESS_ATTACH`).
-- Signal handling for crash diagnostics (`SIGSEGV`, `SIGILL`, `SIGBUS`, `SIGABRT`) with optional backtraces (`WINRUN_DEBUG=1`).
+> Status: experimental. This is **not** a full Windows runtime.
 
-## Quick bootstrap (recommended)
+## Quick start
 
 ```bash
 ./scripts/install.sh
+WINRUN_DEBUG=1 ./build/winrun path/to/app.exe
 ```
 
-This builds `build/winrun` and, when `.wg/*.c` files exist, compiles them into `lib/libwinapi.so`.
-
-## Build manually
-
-```bash
-cmake -S . -B build
-cmake --build build
-```
-
-If `.wg/*.c` exists, CMake also builds `build/lib/libwinapi.so`.
-
-## Run
-
-```bash
-WINRUN_DEBUG=1 ./build/winrun path/to/program.exe [args...]
-```
-
-WinAPI shim lookup order:
-
-1. `WINRUN_WINAPI_LIB` (if set)
-2. `./lib/libwinapi.so`
-3. `./.wg/libwinapi.so`
-4. `./build/lib/libwinapi.so`
-
-## NixOS support
-
-A `shell.nix` is provided. Use:
+## NixOS / nix-shell
 
 ```bash
 nix-shell
 ./scripts/install.sh
 ```
 
-See full guide: [`docs/USAGE.md`](docs/USAGE.md)
+## WinAPI shim integration (`.wg`)
 
-## `.wg` integration
+Place your WinAPI implementation in `.wg/*.c`, for example:
 
-Place your WinAPI compatibility function sources in `.wg/*.c` and re-run installer.
+- `.wg/kernel32_console.c`
+- `.wg/file.c`
 
-See `.wg/README.md` for details.
+Installer builds `lib/libwinapi.so` automatically.
 
-## Notes / limitations
+Runtime lookup order:
 
-- This is an early runtime prototype, not full Windows emulation.
-- Entry-point execution currently does a direct function jump and does not yet provide complete Win32 process startup semantics/ABI thunking.
-- Import-by-ordinal and delay-loaded imports are not yet implemented.
-- SEH translation is not yet complete; signal hooks currently provide debugging aid only.
+1. `WINRUN_WINAPI_LIB` (explicit override)
+2. `./lib/libwinapi.so`
+3. `./.wg/libwinapi.so`
+4. `./build/lib/libwinapi.so`
 
-## Roadmap alignment
+## What was tightened in this revision
 
-The codebase is structured so each major source file maps to one of the planned subsystems:
+- stricter PE header/size validation to reject malformed images early,
+- safer mapped-memory RVA access helpers,
+- relocation/import parsing bounds checks,
+- TLS callback address handling with VA/RVA safety,
+- better installer portability and deterministic build behavior.
 
-- `src/pe_parser.c` → PE file parser
-- `src/memory_mapper.c` → memory mapper
-- `src/relocations.c` → relocation processor
-- `src/import_resolver.c` → import resolver + API binding
-- `src/runtime.c` → TLS + entry-point handler
-- `src/signals.c` → crash/signal integration
+## Current limitations
 
-This gives a practical base for iteratively adding calling-convention thunks, handle tables, richer DLL loading, and structured exception emulation.
+- no delay-load import support,
+- no import-by-ordinal handling,
+- no full Win32 ABI/process initialization emulation,
+- no SEH emulation (only Linux signal diagnostics).

@@ -17,9 +17,9 @@ static int read_file(const char *path, uint8_t **data, size_t *size) {
     }
 
     long file_len = ftell(f);
-    if (file_len < 0) {
+    if (file_len <= 0) {
         fclose(f);
-        return -EIO;
+        return -EINVAL;
     }
     rewind(f);
 
@@ -50,29 +50,42 @@ int pe_parse_image(const char *path, pe_image *out_image) {
     }
 
     if (out_image->file_size < sizeof(pe_dos_header)) {
-        return -EINVAL;
+        rc = -EINVAL;
+        goto fail;
     }
 
     pe_dos_header *dos = (pe_dos_header *)out_image->file_data;
     if (dos->e_magic != PE_DOS_MAGIC) {
-        return -EINVAL;
+        rc = -EINVAL;
+        goto fail;
     }
 
     if ((size_t)dos->e_lfanew + sizeof(pe_nt_headers_prefix) > out_image->file_size) {
-        return -EINVAL;
+        rc = -EINVAL;
+        goto fail;
     }
 
     pe_nt_headers_prefix *prefix = (pe_nt_headers_prefix *)(out_image->file_data + dos->e_lfanew);
     if (prefix->signature != PE_NT_MAGIC) {
-        return -EINVAL;
+        rc = -EINVAL;
+        goto fail;
     }
 
     out_image->section_count = prefix->file_header.number_of_sections;
     out_image->nt_headers = (uint8_t *)prefix;
 
     uint8_t *optional_header_ptr = (uint8_t *)(prefix + 1);
+    if ((size_t)(optional_header_ptr - out_image->file_data) + prefix->file_header.size_of_optional_header > out_image->file_size) {
+        rc = -EINVAL;
+        goto fail;
+    }
+
     uint16_t magic = *(uint16_t *)optional_header_ptr;
     if (magic == PE32_PLUS_MAGIC) {
+        if (prefix->file_header.size_of_optional_header < sizeof(pe_optional_header64)) {
+            rc = -EINVAL;
+            goto fail;
+        }
         pe_optional_header64 *opt = (pe_optional_header64 *)optional_header_ptr;
         out_image->is_pe64 = true;
         out_image->image_base = opt->image_base;
@@ -82,6 +95,10 @@ int pe_parse_image(const char *path, pe_image *out_image) {
         out_image->section_alignment = opt->section_alignment;
         memcpy(out_image->data_directories, opt->data_directories, sizeof(out_image->data_directories));
     } else if (magic == PE32_MAGIC) {
+        if (prefix->file_header.size_of_optional_header < sizeof(pe_optional_header32)) {
+            rc = -EINVAL;
+            goto fail;
+        }
         pe_optional_header32 *opt = (pe_optional_header32 *)optional_header_ptr;
         out_image->is_pe64 = false;
         out_image->image_base = opt->image_base;
@@ -91,17 +108,30 @@ int pe_parse_image(const char *path, pe_image *out_image) {
         out_image->section_alignment = opt->section_alignment;
         memcpy(out_image->data_directories, opt->data_directories, sizeof(out_image->data_directories));
     } else {
-        return -EINVAL;
+        rc = -EINVAL;
+        goto fail;
+    }
+
+    if (out_image->size_of_image == 0 || out_image->size_of_headers == 0 ||
+        out_image->size_of_headers > out_image->size_of_image ||
+        out_image->address_of_entry_point >= out_image->size_of_image) {
+        rc = -EINVAL;
+        goto fail;
     }
 
     uint8_t *section_base = optional_header_ptr + prefix->file_header.size_of_optional_header;
     size_t sections_size = (size_t)out_image->section_count * sizeof(pe_section_header);
     if ((size_t)(section_base - out_image->file_data) + sections_size > out_image->file_size) {
-        return -EINVAL;
+        rc = -EINVAL;
+        goto fail;
     }
 
     out_image->sections = (pe_section_header *)section_base;
     return 0;
+
+fail:
+    pe_destroy_image(out_image);
+    return rc;
 }
 
 void pe_destroy_image(pe_image *image) {

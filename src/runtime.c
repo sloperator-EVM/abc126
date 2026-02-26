@@ -1,11 +1,24 @@
 #include "winrun/loader.h"
 
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 
 #define DLL_PROCESS_ATTACH 1
 
 typedef void (*tls_callback_t)(void *dll_handle, uint32_t reason, void *reserved);
+
+static void *va_to_ptr(const mapped_image *mapped, uint64_t va, size_t size) {
+    if (va >= mapped->actual_base && va - mapped->actual_base + size <= mapped->size) {
+        return mapped->base + (va - mapped->actual_base);
+    }
+
+    if (va + size <= mapped->size) {
+        return mapped->base + va;
+    }
+
+    return NULL;
+}
 
 int initialize_tls(const pe_image *image, mapped_image *mapped) {
     pe_data_directory dir = image->data_directories[IMAGE_DIRECTORY_ENTRY_TLS];
@@ -14,28 +27,44 @@ int initialize_tls(const pe_image *image, mapped_image *mapped) {
     }
 
     if (image->is_pe64) {
-        pe_tls_directory64 *tls = (pe_tls_directory64 *)(mapped->base + dir.virtual_address);
-        uint64_t callbacks_va = tls->address_of_callbacks;
-        if (callbacks_va == 0) {
+        pe_tls_directory64 *tls = mapped_rva_to_ptr(mapped, dir.virtual_address, sizeof(*tls));
+        if (!tls) {
+            return -EINVAL;
+        }
+
+        if (tls->address_of_callbacks == 0) {
             return 0;
         }
 
-        tls_callback_t *callbacks = (tls_callback_t *)(uintptr_t)callbacks_va;
-        while (*callbacks) {
-            (*callbacks)((void *)mapped->actual_base, DLL_PROCESS_ATTACH, NULL);
-            callbacks++;
+        for (size_t i = 0;; ++i) {
+            tls_callback_t *slot = va_to_ptr(mapped, tls->address_of_callbacks + i * sizeof(uint64_t), sizeof(uint64_t));
+            if (!slot) {
+                return -EINVAL;
+            }
+            if (*slot == NULL) {
+                break;
+            }
+            (*slot)((void *)(uintptr_t)mapped->actual_base, DLL_PROCESS_ATTACH, NULL);
         }
     } else {
-        pe_tls_directory32 *tls = (pe_tls_directory32 *)(mapped->base + dir.virtual_address);
-        uint32_t callbacks_va = tls->address_of_callbacks;
-        if (callbacks_va == 0) {
+        pe_tls_directory32 *tls = mapped_rva_to_ptr(mapped, dir.virtual_address, sizeof(*tls));
+        if (!tls) {
+            return -EINVAL;
+        }
+
+        if (tls->address_of_callbacks == 0) {
             return 0;
         }
 
-        tls_callback_t *callbacks = (tls_callback_t *)(uintptr_t)callbacks_va;
-        while (*callbacks) {
-            (*callbacks)((void *)(uintptr_t)mapped->actual_base, DLL_PROCESS_ATTACH, NULL);
-            callbacks++;
+        for (size_t i = 0;; ++i) {
+            tls_callback_t *slot = va_to_ptr(mapped, (uint64_t)tls->address_of_callbacks + i * sizeof(uint32_t), sizeof(uint32_t));
+            if (!slot) {
+                return -EINVAL;
+            }
+            if (*slot == NULL) {
+                break;
+            }
+            (*slot)((void *)(uintptr_t)mapped->actual_base, DLL_PROCESS_ATTACH, NULL);
         }
     }
 
@@ -45,6 +74,10 @@ int initialize_tls(const pe_image *image, mapped_image *mapped) {
 int execute_entry_point(const pe_image *image, mapped_image *mapped, int argc, char **argv) {
     (void)argc;
     (void)argv;
+
+    if (image->address_of_entry_point >= mapped->size) {
+        return -EINVAL;
+    }
 
     uint8_t *entry = mapped->base + image->address_of_entry_point;
     int (*entry_fn)(void) = (int (*)(void))(uintptr_t)entry;

@@ -2,6 +2,7 @@
 #define WINRUN_LOADER_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "winrun/pe.h"
@@ -17,6 +18,8 @@ typedef struct {
     void *default_winapi_lib;
     bool debug;
 } import_resolver;
+
+void *mapped_rva_to_ptr(const mapped_image *mapped, uint32_t rva, size_t size);
 
 int map_pe_image(const pe_image *image, mapped_image *mapped);
 void unmap_pe_image(mapped_image *mapped);

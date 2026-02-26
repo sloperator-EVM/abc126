@@ -1,20 +1,16 @@
 # .wg WinAPI shim sources
 
-Put your WinAPI compatibility functions in this directory as C source files (`*.c`).
+Add your WinAPI compatibility sources here as `.c` files.
 
-Examples:
-- `.wg/kernel32_console.c`
-- `.wg/file_io.c`
+Example exports (names must match PE imports):
+- `GetStdHandle`
+- `WriteFile`
+- `ExitProcess`
 
-`./scripts/install.sh` will automatically compile all `.wg/*.c` into:
+Build using:
 
-- `lib/libwinapi.so`
+```bash
+./scripts/install.sh
+```
 
-`winrun` will attempt to load WinAPI implementations in this order:
-
-1. `WINRUN_WINAPI_LIB` (if set)
-2. `./lib/libwinapi.so`
-3. `./.wg/libwinapi.so`
-4. `./build/lib/libwinapi.so`
-
-Exported symbol names must match PE import names (e.g. `WriteFile`, `GetStdHandle`, `ExitProcess`).
+This will create `lib/libwinapi.so` from all `.wg/*.c` files.
