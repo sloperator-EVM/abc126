@@ -71,11 +71,24 @@ else
   log "add your WinAPI implementation files under .wg/"
 fi
 
-
 if [[ -f "${LIB_DIR}/libwinapi.so" ]]; then
   log "checking libwinapi.so for unresolved symbols"
   ldd -r "${LIB_DIR}/libwinapi.so" >/dev/null
   log "libwinapi.so symbol check passed"
+fi
+
+if [[ -f "${ROOT_DIR}/.wg/test_win.exe" ]]; then
+  log "running loader smoke test against .wg/test_win.exe"
+  set +e
+  smoke_out="$(WINRUN_DEBUG=1 WINRUN_WINAPI_LIB="${LIB_DIR}/libwinapi.so" "${BUILD_DIR}/winrun" "${ROOT_DIR}/.wg/test_win.exe" 2>&1)"
+  smoke_rc=$?
+  set -e
+  printf '%s\n' "${smoke_out}" | sed 's/^/[smoke] /'
+  if printf '%s' "${smoke_out}" | grep -q "caught signal"; then
+    log "loader smoke test crashed"
+    exit 1
+  fi
+  log "loader smoke test completed (rc=${smoke_rc})"
 fi
 
 log "done"

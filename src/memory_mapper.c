@@ -89,9 +89,12 @@ int map_pe_image(const pe_image *image, mapped_image *mapped) {
         }
     }
 
+    return 0;
+}
+
+int protect_pe_image_sections(const pe_image *image, const mapped_image *mapped) {
     long page_size = sysconf(_SC_PAGESIZE);
     if (page_size <= 0) {
-        unmap_pe_image(mapped);
         return -EINVAL;
     }
 
@@ -115,7 +118,6 @@ int map_pe_image(const pe_image *image, mapped_image *mapped) {
         }
 
         if (mprotect((void *)start, len, prot) != 0) {
-            unmap_pe_image(mapped);
             return -errno;
         }
     }
