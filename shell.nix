@@ -6,6 +6,8 @@ pkgs.mkShell {
     gcc
     gnumake
     pkg-config
+    wayland
+    wayland-protocols
     gdb
     strace
     binutils
