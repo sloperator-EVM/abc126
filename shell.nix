@@ -15,7 +15,7 @@ pkgs.mkShell {
   ];
 
   shellHook = ''
-    export WINRUN_DEBUG=${WINRUN_DEBUG:-1}
+    export WINRUN_DEBUG=''${WINRUN_DEBUG:-1}
     echo "winrun dev shell ready"
     echo "bootstrap: ./scripts/install.sh"
     echo "run:       ./build/winrun path/to/program.exe"
