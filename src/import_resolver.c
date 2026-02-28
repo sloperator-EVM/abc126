@@ -147,7 +147,8 @@ static void *resolve_symbol(import_resolver *resolver, const char *dll, const ch
     if (resolver->default_winapi_lib) {
         void *fn = dlsym(resolver->default_winapi_lib, name);
         if (fn) {
-            return fn;
+            void *bridged = bridge_sysv_symbol(name, fn);
+            return bridged ? bridged : fn;
         }
     }
 
