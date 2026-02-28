@@ -77,6 +77,8 @@ int main(int argc, char **argv) {
         fprintf(stderr, "winrun: loaded WinAPI shim from %s\n", winapi_lib_path);
     }
 
+    set_loader_runtime_args(argc - 1, &argv[1]);
+
     import_resolver resolver = {
         .default_winapi_lib = winapi,
         .debug = debug,

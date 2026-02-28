@@ -49,6 +49,12 @@ Runtime lookup order:
 - TLS callback address handling with VA/RVA safety,
 - better installer portability and deterministic build behavior.
 
+## Import resolution behavior
+
+- winrun resolves imports by symbol name from your WinAPI shim first (`libwinapi.so`).
+- if a symbol is not present in the shim, winrun now falls back to process-global symbols (`RTLD_DEFAULT`), which helps with CRT/libc-linked symbols (for example `malloc`, `free`, `strlen`, `signal`).
+- unresolved imports still abort execution and are reported as `unresolved import: DLL!Function`.
+
 ## Current limitations
 
 - no delay-load import support,

@@ -73,7 +73,7 @@ extern UINT SendInput(UINT cInputs, INPUT inputs[], int cbSize){
                 
             case (1):
                 bool is_pressed = 0;
-                if (input.ki.dwFlags == NULL){
+                if (input.ki.dwFlags == 0){
                     is_pressed = 1;
                 }
                 printf("Pressing");
@@ -162,4 +162,126 @@ extern size_t VirtualQuery(const void *address, void *buffer, size_t length){
     }
     memset(buffer, 0, length);
     return length;
+}
+
+
+extern char **environ;
+
+static int g_ucrt_argc = 0;
+static char **g_ucrt_argv = NULL;
+static int g_ucrt_fmode = 0;
+static int g_ucrt_commode = 0;
+static void *g_invalid_parameter_handler = NULL;
+
+extern char ***__p__environ(void){
+    return &environ;
+}
+
+extern int _set_new_mode(int mode){
+    g_ucrt_commode = mode;
+    return g_ucrt_commode;
+}
+
+extern int _configthreadlocale(int per_thread_locale_type){
+    (void)per_thread_locale_type;
+    return 0;
+}
+
+extern int __setusermatherr(void *handler){
+    (void)handler;
+    return 0;
+}
+
+extern void *__C_specific_handler(void){
+    return NULL;
+}
+
+extern int *__p___argc(void){
+    return &g_ucrt_argc;
+}
+
+extern char ***__p___argv(void){
+    return &g_ucrt_argv;
+}
+
+extern void _cexit(void){
+}
+
+extern int _configure_narrow_argv(int mode){
+    (void)mode;
+    return 0;
+}
+
+extern int _crt_atexit(void (*fn)(void)){
+    if (!fn) {
+        return 0;
+    }
+    return atexit(fn);
+}
+
+extern int _initialize_narrow_environment(void){
+    return 0;
+}
+
+extern void _set_app_type(int type){
+    (void)type;
+}
+
+extern void _initterm(void (**start)(void), void (**end)(void)){
+    if (!start || !end) {
+        return;
+    }
+    for (void (**it)(void) = start; it < end; ++it) {
+        if (*it) {
+            (*it)();
+        }
+    }
+}
+
+extern int _initterm_e(int (**start)(void), int (**end)(void)){
+    if (!start || !end) {
+        return 0;
+    }
+    for (int (**it)(void) = start; it < end; ++it) {
+        if (*it) {
+            int rc = (*it)();
+            if (rc != 0) {
+                return rc;
+            }
+        }
+    }
+    return 0;
+}
+
+extern void *_set_invalid_parameter_handler(void *handler){
+    void *old = g_invalid_parameter_handler;
+    g_invalid_parameter_handler = handler;
+    return old;
+}
+
+extern int *__p__commode(void){
+    return &g_ucrt_commode;
+}
+
+extern int *__p__fmode(void){
+    return &g_ucrt_fmode;
+}
+
+extern FILE *__acrt_iob_func(unsigned index){
+    switch (index) {
+        case 0: return stdin;
+        case 1: return stdout;
+        case 2: return stderr;
+        default: return NULL;
+    }
+}
+
+extern int __stdio_common_vfprintf(unsigned long long options, FILE *stream, const char *format, void *locale, va_list args){
+    (void)options;
+    (void)locale;
+    if (!stream || !format) {
+        errno = EINVAL;
+        return -1;
+    }
+    return vfprintf(stream, format, args);
 }
