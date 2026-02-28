@@ -239,21 +239,7 @@ static void *resolve_symbol(import_resolver *resolver, const char *dll, const ch
         }
     }
 
-    void *builtin = resolve_builtin_symbol(name);
-    if (builtin) {
-        return builtin;
-    }
-
-    void *fn = dlsym(RTLD_DEFAULT, name);
-    void *bridged = bridge_sysv_symbol(name, fn);
-    return bridged ? bridged : fn;
-}
-
-static int report_ordinal_import_unsupported(const char *dll_name, uint64_t ordinal) {
-    fprintf(stderr, "unresolved import: %s!#%llu (ordinal imports are not supported)\n",
-            dll_name ? dll_name : "<unknown>",
-            (unsigned long long)ordinal);
-    return -ENOSYS;
+    return resolve_builtin_symbol(name);
 }
 
 static int report_ordinal_import_unsupported(const char *dll_name, uint64_t ordinal) {
