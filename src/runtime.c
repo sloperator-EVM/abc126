@@ -6,7 +6,13 @@
 
 #define DLL_PROCESS_ATTACH 1
 
-typedef void (*tls_callback_t)(void *dll_handle, uint32_t reason, void *reserved);
+#if defined(__x86_64__)
+#define WINRUN_MS_ABI __attribute__((ms_abi))
+#else
+#define WINRUN_MS_ABI
+#endif
+
+typedef void (WINRUN_MS_ABI *tls_callback_t)(void *dll_handle, uint32_t reason, void *reserved);
 
 static void *va_to_ptr(const mapped_image *mapped, uint64_t va, size_t size) {
     if (va >= mapped->actual_base && va - mapped->actual_base + size <= mapped->size) {
@@ -80,7 +86,7 @@ int execute_entry_point(const pe_image *image, mapped_image *mapped, int argc, c
     }
 
     uint8_t *entry = mapped->base + image->address_of_entry_point;
-    int (*entry_fn)(void) = (int (*)(void))(uintptr_t)entry;
+    int (WINRUN_MS_ABI *entry_fn)(void) = (int (WINRUN_MS_ABI *)(void))(uintptr_t)entry;
 
     fprintf(stderr, "jumping to entry point: 0x%llx\n",
             (unsigned long long)(mapped->actual_base + image->address_of_entry_point));
