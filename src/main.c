@@ -77,6 +77,8 @@ int main(int argc, char **argv) {
         fprintf(stderr, "winrun: loaded WinAPI shim from %s\n", winapi_lib_path);
     }
 
+    set_loader_runtime_args(argc - 1, &argv[1]);
+
     import_resolver resolver = {
         .default_winapi_lib = winapi,
         .debug = debug,
@@ -95,6 +97,17 @@ int main(int argc, char **argv) {
     rc = initialize_tls(&image, &mapped);
     if (rc != 0) {
         fprintf(stderr, "failed to initialize TLS (rc=%d)\n", rc);
+        unmap_pe_image(&mapped);
+        pe_destroy_image(&image);
+        if (winapi) {
+            dlclose(winapi);
+        }
+        return 1;
+    }
+
+    rc = protect_pe_image_sections(&image, &mapped);
+    if (rc != 0) {
+        fprintf(stderr, "failed to apply section protections (rc=%d)\n", rc);
         unmap_pe_image(&mapped);
         pe_destroy_image(&image);
         if (winapi) {
