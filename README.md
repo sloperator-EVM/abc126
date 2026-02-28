@@ -18,6 +18,12 @@
 WINRUN_DEBUG=1 ./build/winrun path/to/app.exe
 ```
 
+## Arch Linux
+
+```bash
+./scripts/install-archlinux.sh
+```
+
 ## NixOS / nix-shell
 
 ```bash
@@ -51,9 +57,8 @@ Runtime lookup order:
 
 ## Import resolution behavior
 
-- winrun resolves imports by symbol name from your WinAPI shim first (`libwinapi.so`).
-- if a symbol is not present in the shim, winrun now falls back to process-global symbols (`RTLD_DEFAULT`), which helps with CRT/libc-linked symbols (for example `malloc`, `free`, `strlen`, `signal`).
-- unresolved imports still abort execution and are reported as `unresolved import: DLL!Function`.
+- winrun is now intentionally bare-bones: it resolves imports by symbol name from your WinAPI shim (`libwinapi.so`) plus a small set of built-in CRT helpers needed for startup (`_initterm`, `_initterm_e`, `__acrt_iob_func`, `__stdio_common_vfprintf`, and runtime arg pointers).
+- there is no fallback to process-global symbols (`RTLD_DEFAULT`). If a symbol is not in your `.wg` implementation (or the built-ins), loading fails fast with `unresolved import: DLL!Function`.
 
 ## Current limitations
 
