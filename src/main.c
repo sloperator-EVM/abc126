@@ -77,6 +77,8 @@ int main(int argc, char **argv) {
         fprintf(stderr, "winrun: loaded WinAPI shim from %s\n", winapi_lib_path);
     }
 
+    set_loader_runtime_args(argc - 1, &argv[1]);
+
     import_resolver resolver = {
         .default_winapi_lib = winapi,
         .debug = debug,
@@ -101,6 +103,21 @@ int main(int argc, char **argv) {
             dlclose(winapi);
         }
         return 1;
+    }
+
+    const char *strict_prot_env = getenv("WINRUN_STRICT_PROT");
+    bool strict_prot = strict_prot_env && strcmp(strict_prot_env, "0") != 0;
+    if (strict_prot) {
+        rc = protect_pe_image_sections(&image, &mapped);
+        if (rc != 0) {
+            fprintf(stderr, "failed to apply section protections (rc=%d)\n", rc);
+            unmap_pe_image(&mapped);
+            pe_destroy_image(&image);
+            if (winapi) {
+                dlclose(winapi);
+            }
+            return 1;
+        }
     }
 
     int app_rc = execute_entry_point(&image, &mapped, argc - 1, &argv[1]);
