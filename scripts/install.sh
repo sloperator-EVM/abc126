@@ -61,6 +61,7 @@ if compgen -G "${WG_DIR}/*.c" >/dev/null; then
     ${WG_LIBS} -pthread \
     -o "${LIB_DIR}/libwinapi.so"
   log "built ${LIB_DIR}/libwinapi.so"
+
 elif [[ -f "${BUILD_DIR}/lib/libwinapi.so" ]]; then
   log "copying CMake-built libwinapi.so from build/lib"
   cp -f "${BUILD_DIR}/lib/libwinapi.so" "${LIB_DIR}/libwinapi.so"
