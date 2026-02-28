@@ -96,6 +96,13 @@ static void *resolve_symbol(import_resolver *resolver, const char *dll, const ch
     return dlsym(RTLD_DEFAULT, name);
 }
 
+static int report_ordinal_import_unsupported(const char *dll_name, uint64_t ordinal) {
+    fprintf(stderr, "unresolved import: %s!#%llu (ordinal imports are not supported)\n",
+            dll_name ? dll_name : "<unknown>",
+            (unsigned long long)ordinal);
+    return -ENOSYS;
+}
+
 int resolve_imports(const pe_image *image, mapped_image *mapped, import_resolver *resolver) {
     pe_data_directory dir = image->data_directories[IMAGE_DIRECTORY_ENTRY_IMPORT];
     if (dir.virtual_address == 0 || dir.size < sizeof(pe_import_descriptor)) {
@@ -138,7 +145,8 @@ int resolve_imports(const pe_image *image, mapped_image *mapped, import_resolver
                     break;
                 }
                 if ((*lk & (1ULL << 63)) != 0) {
-                    continue;
+                    uint64_t ordinal = *lk & 0xFFFFULL;
+                    return report_ordinal_import_unsupported(dll_name, ordinal);
                 }
 
                 uint32_t ibn_rva = (uint32_t)(*lk);
@@ -166,7 +174,8 @@ int resolve_imports(const pe_image *image, mapped_image *mapped, import_resolver
                     break;
                 }
                 if ((*lk & (1U << 31)) != 0) {
-                    continue;
+                    uint32_t ordinal = *lk & 0xFFFFU;
+                    return report_ordinal_import_unsupported(dll_name, ordinal);
                 }
 
                 uint8_t *import_by_name = mapped_rva_to_ptr(mapped, *lk, 3);
