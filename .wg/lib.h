@@ -30,8 +30,9 @@ extern bool GetCursorPos(POINT *point){
 }
 
 extern UINT SendInput(UINT cInputs, INPUT inputs[], int cbSize){
-    
-    for (int i = 0; i < cInputs; i++){
+    (void)cbSize;
+
+    for (UINT i = 0; i < cInputs; i++){
         INPUT input = inputs[i];
         switch (input.type){
             case (0):

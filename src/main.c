@@ -105,15 +105,19 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    rc = protect_pe_image_sections(&image, &mapped);
-    if (rc != 0) {
-        fprintf(stderr, "failed to apply section protections (rc=%d)\n", rc);
-        unmap_pe_image(&mapped);
-        pe_destroy_image(&image);
-        if (winapi) {
-            dlclose(winapi);
+    const char *strict_prot_env = getenv("WINRUN_STRICT_PROT");
+    bool strict_prot = strict_prot_env && strcmp(strict_prot_env, "0") != 0;
+    if (strict_prot) {
+        rc = protect_pe_image_sections(&image, &mapped);
+        if (rc != 0) {
+            fprintf(stderr, "failed to apply section protections (rc=%d)\n", rc);
+            unmap_pe_image(&mapped);
+            pe_destroy_image(&image);
+            if (winapi) {
+                dlclose(winapi);
+            }
+            return 1;
         }
-        return 1;
     }
 
     int app_rc = execute_entry_point(&image, &mapped, argc - 1, &argv[1]);

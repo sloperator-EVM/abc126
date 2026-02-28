@@ -67,6 +67,7 @@ extern int initilize_keyboard(){
         close(fd_k);
         return 1;
     }
+    return 0;
 }
 
 // extern int press_button(int PRESS_KEY){

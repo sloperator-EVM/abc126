@@ -49,7 +49,7 @@ if compgen -G "${WG_DIR}/*.c" >/dev/null; then
   log "building lib/libwinapi.so from .wg sources"
   WG_CFLAGS="$(pkg-config --cflags wayland-client)"
   WG_LIBS="$(pkg-config --libs wayland-client)"
-  "${CC_BIN}" -shared -fPIC \
+  "${CC_BIN}" -shared -fPIC -Wno-unused-parameter -Wno-sign-compare \
     -I"${WG_DIR}" -I"${WG_TMP_DIR}" \
     ${WG_CFLAGS} \
     "${WG_DIR}"/*.c \

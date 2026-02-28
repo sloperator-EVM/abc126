@@ -383,6 +383,7 @@ extern void* update_cursor_pos(void* arg){
           break;
         }
     }
+  return NULL;
 }
 
 
