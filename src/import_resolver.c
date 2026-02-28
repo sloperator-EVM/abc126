@@ -8,6 +8,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(__x86_64__)
+#define WINRUN_MS_ABI __attribute__((ms_abi))
+#else
+#define WINRUN_MS_ABI
+#endif
 
 extern char **environ;
 
@@ -21,24 +26,48 @@ void set_loader_runtime_args(int argc, char **argv) {
     g_loader_argv = argv;
 }
 
-static char ***builtin___p__environ(void) { return &environ; }
-static int *builtin___p___argc(void) { return &g_loader_argc; }
-static char ***builtin___p___argv(void) { return &g_loader_argv; }
-static int *builtin___p__fmode(void) { return &g_loader_fmode; }
-static int *builtin___p__commode(void) { return &g_loader_commode; }
+static char ***WINRUN_MS_ABI builtin___p__environ(void) { return &environ; }
+static int *WINRUN_MS_ABI builtin___p___argc(void) { return &g_loader_argc; }
+static char ***WINRUN_MS_ABI builtin___p___argv(void) { return &g_loader_argv; }
+static int *WINRUN_MS_ABI builtin___p__fmode(void) { return &g_loader_fmode; }
+static int *WINRUN_MS_ABI builtin___p__commode(void) { return &g_loader_commode; }
 
-static int builtin__set_new_mode(int mode) { g_loader_commode = mode; return g_loader_commode; }
-static int builtin__configthreadlocale(int mode) { (void)mode; return 0; }
-static int builtin___setusermatherr(void *handler) { (void)handler; return 0; }
-static void *builtin___C_specific_handler(void) { return NULL; }
-static void builtin__cexit(void) {}
-static int builtin__configure_narrow_argv(int mode) { (void)mode; return 0; }
-static int builtin__crt_atexit(void (*fn)(void)) { return fn ? atexit(fn) : 0; }
-static int builtin__initialize_narrow_environment(void) { return 0; }
-static void builtin__set_app_type(int type) { (void)type; }
-static void *builtin__set_invalid_parameter_handler(void *handler) { return handler; }
+static int WINRUN_MS_ABI builtin__set_new_mode(int mode) { g_loader_commode = mode; return g_loader_commode; }
+static int WINRUN_MS_ABI builtin__configthreadlocale(int mode) { (void)mode; return 0; }
+static int WINRUN_MS_ABI builtin___setusermatherr(void *handler) { (void)handler; return 0; }
+static void *WINRUN_MS_ABI builtin___C_specific_handler(void) { return NULL; }
+static void WINRUN_MS_ABI builtin__cexit(void) {}
+static int WINRUN_MS_ABI builtin__configure_narrow_argv(int mode) { (void)mode; return 0; }
+static int WINRUN_MS_ABI builtin__crt_atexit(void (*fn)(void)) { return fn ? atexit(fn) : 0; }
+static int WINRUN_MS_ABI builtin__initialize_narrow_environment(void) { return 0; }
+static void WINRUN_MS_ABI builtin__set_app_type(int type) { (void)type; }
+static void *WINRUN_MS_ABI builtin__set_invalid_parameter_handler(void *handler) { return handler; }
+static void WINRUN_MS_ABI builtin__initterm(void (**start)(void), void (**end)(void)) {
+    if (!start || !end) {
+        return;
+    }
+    for (void (**it)(void) = start; it < end; ++it) {
+        if (*it) {
+            (*it)();
+        }
+    }
+}
+static int WINRUN_MS_ABI builtin__initterm_e(int (**start)(void), int (**end)(void)) {
+    if (!start || !end) {
+        return 0;
+    }
+    for (int (**it)(void) = start; it < end; ++it) {
+        if (*it) {
+            int rc = (*it)();
+            if (rc != 0) {
+                return rc;
+            }
+        }
+    }
+    return 0;
+}
 
-static FILE *builtin___acrt_iob_func(unsigned idx) {
+static FILE *WINRUN_MS_ABI builtin___acrt_iob_func(unsigned idx) {
     switch (idx) {
         case 0: return stdin;
         case 1: return stdout;
@@ -47,7 +76,7 @@ static FILE *builtin___acrt_iob_func(unsigned idx) {
     }
 }
 
-static int builtin___stdio_common_vfprintf(unsigned long long options, FILE *stream, const char *format, void *locale, va_list args) {
+static int WINRUN_MS_ABI builtin___stdio_common_vfprintf(unsigned long long options, FILE *stream, const char *format, void *locale, va_list args) {
     (void)options;
     (void)locale;
     if (!stream || !format) {
@@ -73,6 +102,8 @@ static void *resolve_builtin_symbol(const char *name) {
     if (strcmp(name, "_initialize_narrow_environment") == 0) return (void *)(uintptr_t)builtin__initialize_narrow_environment;
     if (strcmp(name, "_set_app_type") == 0) return (void *)(uintptr_t)builtin__set_app_type;
     if (strcmp(name, "_set_invalid_parameter_handler") == 0) return (void *)(uintptr_t)builtin__set_invalid_parameter_handler;
+    if (strcmp(name, "_initterm") == 0) return (void *)(uintptr_t)builtin__initterm;
+    if (strcmp(name, "_initterm_e") == 0) return (void *)(uintptr_t)builtin__initterm_e;
     if (strcmp(name, "__acrt_iob_func") == 0) return (void *)(uintptr_t)builtin___acrt_iob_func;
     if (strcmp(name, "__stdio_common_vfprintf") == 0) return (void *)(uintptr_t)builtin___stdio_common_vfprintf;
     return NULL;
@@ -88,12 +119,14 @@ static void *resolve_symbol(import_resolver *resolver, const char *dll, const ch
         }
     }
 
-    void *builtin = resolve_builtin_symbol(name);
-    if (builtin) {
-        return builtin;
-    }
+    return resolve_builtin_symbol(name);
+}
 
-    return dlsym(RTLD_DEFAULT, name);
+static int report_ordinal_import_unsupported(const char *dll_name, uint64_t ordinal) {
+    fprintf(stderr, "unresolved import: %s!#%llu (ordinal imports are not supported)\n",
+            dll_name ? dll_name : "<unknown>",
+            (unsigned long long)ordinal);
+    return -ENOSYS;
 }
 
 int resolve_imports(const pe_image *image, mapped_image *mapped, import_resolver *resolver) {
@@ -138,7 +171,8 @@ int resolve_imports(const pe_image *image, mapped_image *mapped, import_resolver
                     break;
                 }
                 if ((*lk & (1ULL << 63)) != 0) {
-                    continue;
+                    uint64_t ordinal = *lk & 0xFFFFULL;
+                    return report_ordinal_import_unsupported(dll_name, ordinal);
                 }
 
                 uint32_t ibn_rva = (uint32_t)(*lk);
@@ -166,7 +200,8 @@ int resolve_imports(const pe_image *image, mapped_image *mapped, import_resolver
                     break;
                 }
                 if ((*lk & (1U << 31)) != 0) {
-                    continue;
+                    uint32_t ordinal = *lk & 0xFFFFU;
+                    return report_ordinal_import_unsupported(dll_name, ordinal);
                 }
 
                 uint8_t *import_by_name = mapped_rva_to_ptr(mapped, *lk, 3);
