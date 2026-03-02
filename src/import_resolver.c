@@ -136,6 +136,20 @@ static void *resolve_builtin_symbol(const char *name) {
     return NULL;
 }
 
+/*
+ * Imported function pointers are called from PE code that uses the Microsoft
+ * x64 ABI. Our built-in helpers are compiled with WINRUN_MS_ABI, but symbols
+ * loaded from libwinapi.so are currently expected to already match what the
+ * guest expects.
+ *
+ * Keep this shim as a dedicated hook so future releases can install generated
+ * bridge thunks for SysV-only exports when needed.
+ */
+static void *bridge_sysv_symbol(const char *name, void *fn) {
+    (void)name;
+    return fn;
+}
+
 static void *resolve_symbol(import_resolver *resolver, const char *dll, const char *name) {
     (void)dll;
 
