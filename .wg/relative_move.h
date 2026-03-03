@@ -12,14 +12,14 @@ int fd;
 struct input_event ev;
 
 extern int init_virtual_mouse() {
-    // Open uinput device
+    
     fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
     if (fd < 0) {
         perror("Failed to open /dev/uinput");
         return -1;
     }
     
-    // Enable mouse events
+    
     ioctl(fd, UI_SET_EVBIT, EV_KEY);
     ioctl(fd, UI_SET_KEYBIT, BTN_LEFT);
     ioctl(fd, UI_SET_KEYBIT, BTN_RIGHT);
@@ -53,8 +53,6 @@ extern int init_virtual_mouse() {
         return -1;
     }
     
-    printf("Virtual mouse created successfully!\n");
-    sleep(1);  // Give system time to recognize
     
     return 0;
 }
@@ -65,7 +63,6 @@ extern void destroy_virtual_mouse() {
         ioctl(fd, UI_DEV_DESTROY);
         close(fd);
         fd = -1;
-        printf("Virtual mouse destroyed.\n");
     }
 }
 
@@ -87,25 +84,17 @@ int sync_mouse(){
     return 0;
 }
 
-// Move cursor using existing virtual mouse
+
 extern void mouseMove(int rel_x, int rel_y) {
     if (fd < 0) {
         printf("Virtual mouse not initialized!\n");
         return;
     }
-    printf("Moving cursor by %d, %d\n", rel_x, rel_y);
-    
-    // Create movement events
-    
-    // X movement
+
     emit_mouse(EV_REL, REL_X, rel_x);
-    
-    // Y movement
     emit_mouse(EV_REL, REL_Y, rel_y);
     
-    // Sync event
     sync_mouse();
-    // Small delay to ensure events are processed
     sleep(0);
 }
 

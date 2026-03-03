@@ -2,6 +2,7 @@
 #include "lib.h"
 
 
+
 void* restrict_cursor(void* arg){
     RECT* rect  = (RECT*) arg;
     int right = rect -> right;
@@ -42,7 +43,9 @@ bool ClipCursor(RECT rect){
 
 
 int main(){
-    MAIN_INIT();
-    SetCursorPos(100, 200);
+    POINT p;
+    SetCursorPos(500, 500);
+    
     MAIN_DESTROY();
+    return 0;
 }

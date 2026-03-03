@@ -1,6 +1,4 @@
-#if !defined(_POSIX_C_SOURCE) || (_POSIX_C_SOURCE < 200809L)
 #define _POSIX_C_SOURCE 200809L
-#endif
 
 #include <stdio.h>
 #include <unistd.h>
@@ -15,12 +13,14 @@
 #include <unistd.h>
 #include "relative_move.h"
 
+#include <wayland-client-protocol.h>
 #include <wayland-client.h>
 
-#include "tmp/single-pixel-buffer-v1.h"
-#include "tmp/wlr-layer-shell-unstable-v1.h"
-#include "tmp/wlr-virtual-pointer-unstable-v1.h"
-#include "tmp/viewporter.h"
+#include "single-pixel-buffer-v1.h"
+#include "wlr-layer-shell-unstable-v1.h"
+#include "wlr-virtual-pointer-unstable-v1.h"
+#include "viewporter.h"
+
 
 
 // for arguments
@@ -28,6 +28,7 @@
 char *argv0;
 extern int x;
 extern int y;
+bool initilized = 0;
 
 char *emulate_cmd = NULL;
 
@@ -209,7 +210,7 @@ static void pointer_handle_enter(void *data, struct wl_pointer *wl_pointer, uint
   cursor_x = wl_fixed_to_int(surface_x);
   cursor_y = wl_fixed_to_int(surface_y);
 
-  //printf("%d %d enter\n", cursor_x, cursor_y);
+  printf("%d %d enter\n", cursor_x, cursor_y);
 
   if(no_animation == true) {
     //running = false;
@@ -245,7 +246,7 @@ static void pointer_handle_motion(void *data, struct wl_pointer *wl_pointer,
     uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y) {
   cursor_x = wl_fixed_to_int(surface_x);
   cursor_y = wl_fixed_to_int(surface_y);
-  //printf("%d %d move \n", cursor_x, cursor_y);
+  printf("%d %d move \n", cursor_x, cursor_y);
   running = false;
 }
 
@@ -293,7 +294,7 @@ static void global_registry_handler(void *data, struct wl_registry *registry,
   } else if (strcmp(interface, wl_compositor_interface.name) == 0) {
     compositor = wl_registry_bind(registry, id, &wl_compositor_interface, 4);
   } else if (strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0) {
-    layer_shell = wl_registry_bind(registry, id, &zwlr_layer_shell_v1_interface, 2);
+    layer_shell = wl_registry_bind(registry, id, &zwlr_layer_shell_v1_interface, 3);
   } else if (strcmp(interface, wp_viewporter_interface.name) == 0) {
     viewporter = wl_registry_bind(registry, id, &wp_viewporter_interface, 1);
   } else if (strcmp(interface, wp_single_pixel_buffer_manager_v1_interface.name) == 0) {
@@ -364,31 +365,30 @@ static const struct zwlr_layer_surface_v1_listener layer_surface_listener = {
 };
 
 void usage() {
-  printf("wl-find-cursor - highlight and report cursor position in wayland.\n\n");
-  printf("Options:\n");
-  printf("  -d <int>    : animation duration in milliseconds.\n");
-  printf("  -s <int>    : animation circle size.\n");
-  printf("  -c <hex int>: animation circle color in 0xAARRGGBB format.\n");
-  printf("  -p          : skip animation.\n");
-  printf("  -e <string> : command to emulate mouse move event.\n");
-  printf("  -h          : show this message.\n");
   exit(0);
 }
 
-extern void* update_cursor_pos(void* arg){
+void* update_cursor_pos(void* arg){
   while (true) {
+        if (!initilized) {
+          printf("Not initilized \n");
+          sleep(1);
+          continue;
+        }
         int check = wl_display_dispatch(display);
         if (check == -1){
+          
           printf("Error in updating cursor position has occured \n");
           break;
         }
+        printf("Working \n");
     }
-  return NULL;
+
 }
 
 
 
-extern int init_layer_shell()
+int init_layer_shell()
 {
 
   display = wl_display_connect(NULL);
@@ -456,13 +456,11 @@ extern int init_layer_shell()
 
   delay_ms = animation_duration_in_ms;
   start_ms = now_ms();
-  while (layer_configured) {
-    wl_display_dispatch(display);
-  }
+  initilized = true;
   return 0;
 }
 
-extern int destroy_layer_shell(){
+int destroy_layer_shell(){
   if (frame_callback != NULL) {
       wl_callback_destroy(frame_callback);
   }
@@ -478,5 +476,6 @@ extern int destroy_layer_shell(){
   wp_viewporter_destroy(viewporter);
   wp_single_pixel_buffer_manager_v1_destroy(single_pixel_buffer_manager);
   wl_registry_destroy(registry);
+
   return 0;
 }
