@@ -1,7 +1,11 @@
+#include "keycodes.h"
+
+
 typedef unsigned long DWORD;
 typedef unsigned long long ULONG_PTR;
 typedef unsigned short WORD;
 typedef unsigned int UINT;
+typedef unsigned char BYTE;
 
 #define MOUSEEVENTF_MOVE	0x0001
 #define MOUSEEVENTF_LEFTDOWN	0x0002
@@ -69,3 +73,16 @@ typedef struct {
     };
     
 } INPUT;
+
+
+typedef struct _SYSTEMTIME {
+  WORD wYear;
+  WORD wMonth;
+  WORD wDayOfWeek;
+  WORD wDay;
+  WORD wHour;
+  WORD wMinute;
+  WORD wSecond;
+  WORD wMilliseconds;
+} SYSTEMTIME;
+
