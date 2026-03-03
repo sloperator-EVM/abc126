@@ -19,6 +19,25 @@ require_tool() {
   fi
 }
 
+install_archlinux_deps_if_available() {
+  if [[ -f /etc/arch-release ]] && command -v pacman >/dev/null 2>&1; then
+    log "detected Arch Linux; installing build dependencies via pacman"
+    local pacman_cmd=(pacman)
+    if [[ "${EUID}" -ne 0 ]]; then
+      require_tool sudo
+      pacman_cmd=(sudo pacman)
+    fi
+    "${pacman_cmd[@]}" -Sy --needed --noconfirm \
+      base-devel \
+      cmake \
+      gcc \
+      pkgconf \
+      wayland \
+      wayland-protocols \
+      libinput
+  fi
+}
+
 jobs() {
   if command -v nproc >/dev/null 2>&1; then
     nproc
@@ -28,6 +47,7 @@ jobs() {
 }
 
 log "checking required tools"
+install_archlinux_deps_if_available
 require_tool cmake
 require_tool "${CC_BIN}"
 
@@ -40,15 +60,15 @@ mkdir -p "${LIB_DIR}"
 if compgen -G "${WG_DIR}/*.c" >/dev/null; then
   require_tool pkg-config
 
-  if ! pkg-config --exists wayland-client; then
-    log "wayland-client development files are required to build libwinapi.so"
-    log "install package: wayland (dev) and rerun (for nix-shell include wayland in buildInputs)"
+  if ! pkg-config --exists wayland-client libinput libudev; then
+    log "wayland-client, libinput, and libudev development files are required to build libwinapi.so"
+    log "install packages providing wayland-client.pc, libinput.pc, and libudev.pc and rerun"
     exit 1
   fi
 
   log "building lib/libwinapi.so from .wg sources"
-  WG_CFLAGS="$(pkg-config --cflags wayland-client)"
-  WG_LIBS="$(pkg-config --libs wayland-client)"
+  WG_CFLAGS="$(pkg-config --cflags wayland-client libinput libudev)"
+  WG_LIBS="$(pkg-config --libs wayland-client libinput libudev)"
   "${CC_BIN}" -shared -fPIC -Wno-unused-parameter -Wno-sign-compare \
     -I"${WG_DIR}" -I"${WG_TMP_DIR}" \
     ${WG_CFLAGS} \

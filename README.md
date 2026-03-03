@@ -20,9 +20,7 @@ WINRUN_DEBUG=1 ./build/winrun path/to/app.exe
 
 ## Arch Linux
 
-```bash
-./scripts/install-archlinux.sh
-```
+`./scripts/install.sh` auto-detects Arch Linux and installs required dependencies via `pacman` before building.
 
 ## NixOS / nix-shell
 
@@ -59,6 +57,10 @@ Runtime lookup order:
 
 - winrun is now intentionally bare-bones: it resolves imports by symbol name from your WinAPI shim (`libwinapi.so`) plus a small set of built-in CRT helpers needed for startup (`_initterm`, `_initterm_e`, `__acrt_iob_func`, `__stdio_common_vfprintf`, and runtime arg pointers).
 - there is no fallback to process-global symbols (`RTLD_DEFAULT`). If a symbol is not in your `.wg` implementation (or the built-ins), loading fails fast with `unresolved import: DLL!Function`.
+
+## Building Windows test binaries
+
+`windows.h` is provided by a Windows SDK (on Windows) or by MinGW-w64 headers (when cross-compiling on Linux). `winrun` does not provide that header itself.
 
 ## Current limitations
 
