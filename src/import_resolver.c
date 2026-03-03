@@ -136,6 +136,18 @@ static void *resolve_builtin_symbol(const char *name) {
     return NULL;
 }
 
+/*
+ * NOTE:
+ * Imports are expected to resolve to functions that already match the ABI used
+ * by the loaded PE code (Microsoft x64 on x86_64 builds). Previous attempts to
+ * synthesize runtime ABI bridge thunks here were unstable and caused crashes in
+ * smoke tests; keep resolution conservative for release builds.
+ */
+static void *bridge_sysv_symbol(const char *name, void *fn) {
+    (void)name;
+    return fn;
+}
+
 static void *resolve_symbol(import_resolver *resolver, const char *dll, const char *name) {
     (void)dll;
 
