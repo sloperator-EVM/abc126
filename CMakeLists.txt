@@ -33,8 +33,10 @@ if (WG_SOURCES)
 
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(WAYLAND_CLIENT QUIET wayland-client)
-    if (NOT WAYLAND_CLIENT_FOUND)
-        message(FATAL_ERROR "Detected .wg WinAPI sources but could not find wayland-client via pkg-config. Install Wayland development packages (e.g. wayland, wayland-protocols) and retry.")
+    pkg_check_modules(LIBINPUT QUIET libinput)
+    pkg_check_modules(LIBUDEV QUIET libudev)
+    if (NOT WAYLAND_CLIENT_FOUND OR NOT LIBINPUT_FOUND OR NOT LIBUDEV_FOUND)
+        message(FATAL_ERROR "Detected .wg WinAPI sources but could not find wayland-client, libinput, and libudev via pkg-config. Install Wayland + input development packages and retry.")
     endif()
 
     add_library(winapi SHARED ${WG_SOURCES} ${WG_PROTOCOL_SOURCES})
@@ -46,9 +48,11 @@ if (WG_SOURCES)
         ${CMAKE_SOURCE_DIR}/.wg
         ${CMAKE_SOURCE_DIR}/.wg/tmp
         ${WAYLAND_CLIENT_INCLUDE_DIRS}
+        ${LIBINPUT_INCLUDE_DIRS}
+        ${LIBUDEV_INCLUDE_DIRS}
     )
-    target_link_libraries(winapi PRIVATE ${WAYLAND_CLIENT_LIBRARIES} pthread)
-    target_compile_options(winapi PRIVATE ${WAYLAND_CLIENT_CFLAGS_OTHER})
+    target_link_libraries(winapi PRIVATE ${WAYLAND_CLIENT_LIBRARIES} ${LIBINPUT_LIBRARIES} ${LIBUDEV_LIBRARIES} pthread)
+    target_compile_options(winapi PRIVATE ${WAYLAND_CLIENT_CFLAGS_OTHER} ${LIBINPUT_CFLAGS_OTHER} ${LIBUDEV_CFLAGS_OTHER})
     if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(winapi PRIVATE -Wall -Wextra -Wpedantic -Wno-unused-parameter -Wno-sign-compare)
     endif()

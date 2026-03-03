@@ -10,6 +10,37 @@
 bool is_initilized = false;
 
 
+typedef struct {
+    void *debug_info;
+    long lock_count;
+    long recursion_count;
+    void *owning_thread;
+    void *lock_semaphore;
+    unsigned long spin_count;
+} CRITICAL_SECTION;
+
+void InitializeCriticalSection(CRITICAL_SECTION *lpCriticalSection){
+    (void)lpCriticalSection;
+}
+
+void DeleteCriticalSection(CRITICAL_SECTION *lpCriticalSection){
+    (void)lpCriticalSection;
+}
+
+void EnterCriticalSection(CRITICAL_SECTION *lpCriticalSection){
+    (void)lpCriticalSection;
+}
+
+void LeaveCriticalSection(CRITICAL_SECTION *lpCriticalSection){
+    (void)lpCriticalSection;
+}
+
+int TryEnterCriticalSection(CRITICAL_SECTION *lpCriticalSection){
+    (void)lpCriticalSection;
+    return 1;
+}
+
+
 void MAIN_INIT(){
     is_initilized = true;
     init_tablet();
